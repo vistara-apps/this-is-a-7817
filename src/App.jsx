@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
+import { AuthProvider } from './contexts/AuthContext'
 import Header from './components/Header'
 import HomePage from './components/HomePage'
 import SymptomChecker from './components/SymptomChecker'
 import SymptomTracker from './components/SymptomTracker'
 import ConditionInfo from './components/ConditionInfo'
 import SubscriptionModal from './components/SubscriptionModal'
-import { useLocalStorage } from './hooks/useLocalStorage'
+import AuthModal from './components/auth/AuthModal'
 
-function App() {
+function AppContent() {
   const [currentPage, setCurrentPage] = useState('home')
-  const [isSubscribed, setIsSubscribed] = useLocalStorage('isSubscribed', false)
-  const [usageCount, setUsageCount] = useLocalStorage('usageCount', 0)
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authModalMode, setAuthModalMode] = useState('signin')
   const [selectedCondition, setSelectedCondition] = useState(null)
 
   const handlePageChange = (page, data = null) => {
@@ -21,18 +22,13 @@ function App() {
     }
   }
 
-  const checkUsageLimit = () => {
-    if (!isSubscribed && usageCount >= 3) {
-      setShowSubscriptionModal(true)
-      return false
-    }
-    return true
+  const handleShowAuth = (mode = 'signin') => {
+    setAuthModalMode(mode)
+    setShowAuthModal(true)
   }
 
-  const incrementUsage = () => {
-    if (!isSubscribed) {
-      setUsageCount(prev => prev + 1)
-    }
+  const handleShowSubscription = () => {
+    setShowSubscriptionModal(true)
   }
 
   const renderCurrentPage = () => {
@@ -41,14 +37,17 @@ function App() {
         return (
           <SymptomChecker 
             onNavigate={handlePageChange}
-            checkUsageLimit={checkUsageLimit}
-            incrementUsage={incrementUsage}
-            isSubscribed={isSubscribed}
-            usageCount={usageCount}
+            onShowAuth={handleShowAuth}
+            onShowSubscription={handleShowSubscription}
           />
         )
       case 'symptom-tracker':
-        return <SymptomTracker onNavigate={handlePageChange} />
+        return (
+          <SymptomTracker 
+            onNavigate={handlePageChange}
+            onShowAuth={handleShowAuth}
+          />
+        )
       case 'condition-info':
         return (
           <ConditionInfo 
@@ -57,32 +56,52 @@ function App() {
           />
         )
       default:
-        return <HomePage onNavigate={handlePageChange} />
+        return (
+          <HomePage 
+            onNavigate={handlePageChange}
+            onShowAuth={handleShowAuth}
+          />
+        )
     }
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-bg">
       <Header 
         currentPage={currentPage}
         onNavigate={handlePageChange}
-        isSubscribed={isSubscribed}
-        usageCount={usageCount}
+        onShowAuth={handleShowAuth}
       />
       <main className="pt-20">
         {renderCurrentPage()}
       </main>
       
+      {/* Modals */}
       {showSubscriptionModal && (
         <SubscriptionModal
           onClose={() => setShowSubscriptionModal(false)}
           onSubscribe={() => {
-            setIsSubscribed(true)
             setShowSubscriptionModal(false)
           }}
         />
       )}
+
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          initialMode={authModalMode}
+        />
+      )}
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
